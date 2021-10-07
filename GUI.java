@@ -1,5 +1,7 @@
 import java.sql.*;
 import java.awt.event.*;
+import java.lang.Thread.State;
+
 import javax.swing.*;
 
 /*
@@ -16,34 +18,7 @@ public class GUI extends JFrame implements ActionListener {
     public static void main(String[] args)
     {
       //Building the connection
-      Connection conn = null;
-      //TODO STEP 1
-      try {
-        Class.forName("org.postgresql.Driver");
-        conn = DriverManager.getConnection("jdbc:postgresql://csce-315-db.engr.tamu.edu/csce315902_9db",
-           "csce315902_9user", "rotc1738");
-      } catch (Exception e) {
-        e.printStackTrace();
-        System.err.println(e.getClass().getName()+": "+e.getMessage());
-        System.exit(0);
-      }
-      JOptionPane.showMessageDialog(null,"Opened database successfully");
-
-      String name = "";
-      try{
-        //create a statement object
-        Statement stmt = conn.createStatement();
-        //create an SQL statement
-        //TODO Step 2
-        String sqlStatement = "select * from tvshowsandmovies limit 10;";
-        //send statement to DBMS
-        ResultSet result = stmt.executeQuery(sqlStatement);
-        while (result.next()) {
-          name += result.getString("medianame")+"\n";
-        }
-      } catch (Exception e){
-        JOptionPane.showMessageDialog(null,"Error accessing Database.");
-      }
+      
       // create a new frame
       f = new JFrame("DB GUI");
 
@@ -59,12 +34,65 @@ public class GUI extends JFrame implements ActionListener {
       b.addActionListener(s);
 
       //TODO Step 3
-        JTextArea myarea = new JTextArea(name);
+        JTextArea movies = new JTextArea(20,20);
 
 
 
       //TODO Step 4
-        p.add(myarea);
+        p.add(movies);
+        JTextArea start_date = new JTextArea(1,5);
+        JTextArea end_date = new JTextArea(1,5);
+        JButton submit = new JButton("Submit");
+        JButton clear = new JButton("Clear");
+        p.add(start_date);
+        p.add(end_date);
+        p.add(submit); 
+        p.add(clear);
+        submit.addActionListener(new ActionListener(){
+          public void actionPerformed(final ActionEvent e) {
+            Connection conn = null;
+            try {
+              Class.forName("org.postgresql.Driver");
+              conn = DriverManager.getConnection("jdbc:postgresql://csce-315-db.engr.tamu.edu/csce315902_9db",
+                "csce315902_9user", "rotc1738");
+            } catch (Exception f) {
+              f.printStackTrace();
+              System.err.println(e.getClass().getName()+": "+f.getMessage());
+              System.exit(0);
+            }
+            JOptionPane.showMessageDialog(null,"Opened database successfully");
+
+            String name = "";
+            try{
+              //create a statement object
+              Statement stmt = conn.createStatement();
+              //create an SQL statement
+              //TODO Step 2
+              String start = start_date.getText();
+              String end = end_date.getText();
+              String sqlStatement = "select medianame from tvshowsandmovies where titleid in (select titleid from users where (date >= '"+ start + "' and date <= '"+ end + "') group by titleid order by count(*) desc limit 10);";
+              //send statement to DBMS
+              ResultSet result = stmt.executeQuery(sqlStatement);
+              while (result.next()) {
+                name += result.getString("medianame")+"\n";
+              }
+              movies.append(name);
+            } catch (Exception f){
+              JOptionPane.showMessageDialog(null,"Query cannot be made");
+            }
+            try {
+              conn.close();
+            } catch(Exception f) {
+                System.out.println("Connection has an error");
+            }
+            }
+        });
+
+        clear.addActionListener(new ActionListener(){
+          public void actionPerformed(final ActionEvent e){
+            movies.setText("");
+          }
+        });
       // add button to panel
       p.add(b);
 
@@ -77,12 +105,7 @@ public class GUI extends JFrame implements ActionListener {
       f.show();
 
       //closing the connection
-      try {
-        conn.close();
-        JOptionPane.showMessageDialog(null,"Connection Closed.");
-      } catch(Exception e) {
-        JOptionPane.showMessageDialog(null,"Connection NOT Closed.");
-      }
+      
     }
 
     // if button is pressed
